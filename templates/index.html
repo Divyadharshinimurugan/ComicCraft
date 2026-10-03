@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>ComicCraft - AI Comic Story Creator</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7ff, #e8ecff);
+            min-height: 100vh;
+            padding: 30px;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 42px;
+            color: #4b3cc4;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #555;
+            font-size: 18px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 18px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+        }
+
+        .input-card h2 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 130px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            resize: vertical;
+            font-size: 16px;
+            outline: none;
+        }
+
+        textarea:focus {
+            border-color: #6c5ce7;
+        }
+
+        button {
+            width: 100%;
+            margin-top: 15px;
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            background: #6c5ce7;
+            color: white;
+            font-size: 17px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #5748c7;
+        }
+
+        button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .loading-card {
+            text-align: center;
+        }
+
+        .loading-card h2 {
+            color: #6c5ce7;
+            margin-bottom: 10px;
+        }
+
+        .comic-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .comic-panel {
+            background: #fff;
+            border: 2px solid #ddd;
+            border-radius: 15px;
+            overflow: hidden;
+            padding: 15px;
+        }
+
+        .comic-panel h3 {
+            color: #6c5ce7;
+            margin-bottom: 10px;
+        }
+
+        .comic-panel p {
+            color: #444;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .comic-image {
+            width: 100%;
+            display: block;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .error-card {
+            border-left: 5px solid #e74c3c;
+        }
+
+        .error-card h2 {
+            color: #e74c3c;
+            margin-bottom: 10px;
+        }
+
+        .footer {
+            text-align: center;
+            color: #777;
+            margin-top: 30px;
+        }
+
+        @media (max-width: 700px) {
+            body {
+                padding: 15px;
+            }
+
+            .header h1 {
+                font-size: 32px;
+            }
+
+            .comic-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <div class="header">
+            <h1>🎨 ComicCraft</h1>
+            <p>AI Comic Story Creator using Gemini Models</p>
+        </div>
+
+        <div class="card input-card">
+
+            <h2>💡 Enter Your Story Idea</h2>
+
+            <textarea
+                id="story"
+                placeholder="Example: A young student discovers a mysterious robot in her college..."
+            ></textarea>
+
+            <button id="generateButton">
+                ✨ Generate Comic
+            </button>
+
+        </div>
+
+        <div id="result"></div>
+
+        <div class="footer">
+            <p>Powered by Google Gemini AI</p>
+        </div>
+
+    </div>
+
+    <script>
+
+        const button = document.getElementById("generateButton");
+        const result = document.getElementById("result");
+
+        function displayComic(comicText) {
+
+            result.innerHTML = "";
+
+            const comicCard = document.createElement("div");
+            comicCard.className = "card";
+
+            const title = document.createElement("h2");
+            title.textContent = "📖 Your AI Generated Comic";
+            title.style.color = "#4b3cc4";
+
+            comicCard.appendChild(title);
+
+            const grid = document.createElement("div");
+            grid.className = "comic-grid";
+
+            const panelMatches = comicText.split(
+                /Panel\s+[1-4]\s*:/i
+            );
+
+            const panels = panelMatches
+                .slice(1, 5)
+                .map(panel => panel.trim());
+
+            panels.forEach((panelText, index) => {
+
+                const panel = document.createElement("div");
+                panel.className = "comic-panel";
+
+                const heading = document.createElement("h3");
+                heading.textContent = "Panel " + (index + 1);
+
+                const sceneMatch = panelText.match(
+                    /Scene\s*:\s*([\s\S]*?)(?=Dialogue\s*:|$)/i
+                );
+
+                const dialogueMatch = panelText.match(
+                    /Dialogue\s*:\s*([\s\S]*)/i
+                );
+
+                const scene = document.createElement("p");
+                scene.innerHTML =
+                    "<strong>Scene:</strong> " +
+                    (sceneMatch
+                        ? sceneMatch[1].trim()
+                        : panelText);
+
+                const dialogue = document.createElement("p");
+
+                dialogue.innerHTML =
+                    "<strong>Dialogue:</strong> " +
+                    (dialogueMatch
+                        ? dialogueMatch[1].trim()
+                        : "No dialogue");
+
+                panel.appendChild(heading);
+                panel.appendChild(scene);
+                panel.appendChild(dialogue);
+
+                grid.appendChild(panel);
+            });
+
+            comicCard.appendChild(grid);
+            result.appendChild(comicCard);
+        }
+
+
+        button.addEventListener("click", async function () {
+
+            const story =
+                document.getElementById("story").value.trim();
+
+            if (!story) {
+                alert("Please enter a story idea!");
+                return;
+            }
+
+            button.disabled = true;
+            button.innerText = "✨ Generating Comic...";
+
+            result.innerHTML = `
+                <div class="card loading-card">
+                    <h2>🎨 Creating your comic...</h2>
+                    <p>
+                        Generating story and illustrations.
+                        Please wait.
+                    </p>
+                </div>
+            `;
+
+            try {
+
+                // Step 1: Generate comic story
+                const storyResponse = await fetch("/generate", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        story: story
+                    })
+                });
+
+                const storyData =
+                    await storyResponse.json();
+
+                if (
+                    !storyResponse.ok ||
+                    !storyData.success
+                ) {
+                    throw new Error(
+                        storyData.error ||
+                        "Story generation failed."
+                    );
+                }
+
+
+                // Step 2: Display the four-panel story
+                displayComic(storyData.comic);
+
+
+                // Step 3: Generate comic panel images
+                console.log("STEP 3: Starting image generation...");
+
+                const imageResponse =
+                    await fetch("/generate-images", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            comic: storyData.comic
+                        })
+                    });
+
+                const imageData =
+                    await imageResponse.json();
+
+                if (
+                    !imageResponse.ok ||
+                    !imageData.success
+                ) {
+                    throw new Error(
+                        imageData.error ||
+                        "Image generation failed."
+                    );
+                }
+
+
+                // Step 4: Add images to comic panels
+                const panels =
+                    document.querySelectorAll(
+                        ".comic-panel"
+                    );
+
+                imageData.images.forEach(
+                    (imageUrl, index) => {
+
+                        if (panels[index]) {
+
+                            const image =
+                                document.createElement("img");
+
+                            image.src =
+                                imageUrl +
+                                "?t=" +
+                                Date.now();
+
+                            image.alt =
+                                "Comic panel " +
+                                (index + 1);
+
+                            image.className =
+                                "comic-image";
+
+                            panels[index].prepend(image);
+                        }
+                    }
+                );
+            
+                // Step 5: Add Download PDF button
+
+const pdfButton = document.createElement("button");
+
+pdfButton.innerText = "📥 Download Comic as PDF";
+
+pdfButton.style.marginTop = "20px";
+pdfButton.style.background = "#4b3cc4";
+
+pdfButton.addEventListener("click", async function () {
+
+    pdfButton.disabled = true;
+    pdfButton.innerText = "⏳ Creating PDF...";
+
+    try {
+
+        const pdfResponse = await fetch(
+            "/download-pdf",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    comic: storyData.comic,
+                    images: imageData.images
+                })
+            }
+        );
+
+        if (!pdfResponse.ok) {
+
+            const errorData =
+                await pdfResponse.json();
+
+            throw new Error(
+                errorData.error ||
+                "PDF generation failed."
+            );
+        }
+
+
+        const pdfBlob =
+            await pdfResponse.blob();
+
+        const downloadUrl =
+            window.URL.createObjectURL(pdfBlob);
+
+        const link =
+            document.createElement("a");
+
+        link.href = downloadUrl;
+
+        link.download =
+            "ComicCraft_Comic.pdf";
+
+        document.body.appendChild(link);
+
+        link.click();
+
+        link.remove();
+
+        window.URL.revokeObjectURL(
+            downloadUrl
+        );
+
+
+        pdfButton.innerText =
+            "✅ PDF Downloaded!";
+
+
+    } catch (error) {
+
+        alert(
+            "PDF download failed: " +
+            error.message
+        );
+
+        pdfButton.innerText =
+            "📥 Download Comic as PDF";
+
+    } finally {
+
+        pdfButton.disabled = false;
+
+    }
+
+});
+
+
+result.appendChild(pdfButton);
+
+
+            } catch (error) {
+
+                result.insertAdjacentHTML(
+                    "beforeend",
+                    `
+                    <div class="card error-card">
+                        <h2>
+                            ❌ Something went wrong
+                        </h2>
+                        <p class="image-error"></p>
+                    </div>
+                    `
+                );
+
+                result.querySelector(
+                    ".image-error"
+                ).textContent = error.message;
+
+            } finally {
+
+                button.disabled = false;
+                button.innerText =
+                    "✨ Generate Comic";
+
+            }
+
+        });
+
+    </script>
+
+</body>
+</html>
